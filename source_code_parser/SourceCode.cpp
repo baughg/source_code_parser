@@ -9,7 +9,9 @@
 using namespace Code;
 
 Source::Source()
-	: id_(0ULL)
+	: id_(0ULL),
+	level_(1),
+	p_longest_path_src_(nullptr)
 {
 }
 
@@ -195,6 +197,35 @@ void Source::add_include_me(Code::Source &src)
 	src_include_me_.push_back(&src);
 }
 
+bool Source::find_tree_level()
+{
+	const size_t include_count = src_i_include_.size();
+
+	if (!include_count) {
+		level_ = src_include_me_.size() == 0 ? ~0 : 1;
+		return false;
+	}
+
+	uint32_t current_level_ = level_;
+	uint32_t new_level = 0;
+
+	for (size_t inc = 0; inc < include_count; ++inc)
+	{
+		if (src_i_include_[inc]->p_longest_path_src_ == this)
+			continue;
+
+		new_level = src_i_include_[inc]->level_ + 1;
+
+		if (new_level > level_)
+		{
+			level_ = new_level;
+			p_longest_path_src_ = src_i_include_[inc];
+		}
+	}
+
+	return level_ != current_level_;
+}
+
 void Source::build_source_dependency_tree(std::map<uint64_t, std::vector<Code::Source*>> &source_id_map)
 {
 	const size_t include_count = include_list_.size();
@@ -206,10 +237,12 @@ void Source::build_source_dependency_tree(std::map<uint64_t, std::vector<Code::S
 	src_i_include_.reserve(include_count<<2);
 	source_to_include_mapping_.reserve(include_count << 2);
 	std::vector<Code::Source*> source_list;
+	include_info_.resize(include_count);
 
 	for (size_t inc = 0; inc < include_count; ++inc)
 	{
 		id = include_ids_[inc];
+		include_info_[inc].is_external = 1;
 
 		if (source_id_map.find(id) != source_id_map.end())
 		{
@@ -219,7 +252,69 @@ void Source::build_source_dependency_tree(std::map<uint64_t, std::vector<Code::S
 			{
 				src_i_include_.push_back(source_list[sl]);
 				source_to_include_mapping_.push_back((uint32_t)inc);
+				include_info_[inc].is_external = 0;
+				source_list[sl]->add_include_me(*this);
 			}
 		}
 	}
+}
+
+uint32_t Source::level()
+{
+	return level_;
+}
+
+bool Source::report()
+{
+	if (level_ == ~0)
+		return false;
+
+	const size_t src_i_include_count = src_i_include_.size();
+	const size_t src_include_me_count = src_include_me_.size();
+	const size_t external_includes = include_info_.size();
+
+	uint32_t externals = 0;
+
+	for (size_t e = 0; e < external_includes; ++e)
+	{
+		externals += include_info_[e].is_external;
+	}
+
+	printf("%03u. %s\n",level_,name_full_.c_str());
+
+	if (src_include_me_count) {
+		printf("\n--------included by------------\n");
+
+		for (size_t src = 0; src < src_include_me_count; ++src)
+		{
+			printf("\t%03u. %s\n", 
+				src_include_me_[src]->level_, 
+				src_include_me_[src]->name_full_.c_str());
+		}
+	}
+
+	if (src_i_include_count) {
+		printf("\n--------includes------------\n");
+
+		for (size_t src = 0; src < src_i_include_count; ++src)
+		{
+			printf("\t%03u. %s\n",
+				src_i_include_[src]->level_,
+				src_i_include_[src]->name_full_.c_str());
+		}
+	}
+
+	if (externals)
+	{
+		printf("\n--------external------------\n");
+
+		for (size_t src = 0; src < external_includes; ++src)
+		{
+			if (include_info_[src].is_external)
+				printf("\t%s\n", include_list_full_[src].c_str());
+		}
+	}
+
+	printf("\n\n");
+	return true;
 }

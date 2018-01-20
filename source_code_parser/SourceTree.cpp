@@ -1,4 +1,5 @@
 #include "SourceTree.h"
+#include <algorithm>
 
 using namespace Code;
 
@@ -55,4 +56,53 @@ bool SourceTree::get_source(std::string & source_dir)
 		source_code_[src].build_source_dependency_tree(source_id_map_);
 	}
 	return true;
+}
+
+bool sort_by_level(const Code::source_depth &lhs, const Code::source_depth &rhs)
+{
+	return lhs.level < rhs.level;
+}
+
+void SourceTree::compute_source_distances()
+{
+	const size_t source_count = source_code_.size();
+	bool iterate = true;
+	source_depth_list_.resize(source_count);
+	uint32_t interations = 0;
+
+	while (iterate) {
+		iterate = false;
+
+		for (size_t src = 0; src < source_count; ++src)
+		{
+			iterate |= source_code_[src].find_tree_level();
+		}
+
+		interations++;
+	}
+
+	for (size_t src = 0; src < source_count; ++src)
+	{
+		source_depth_list_[src].level = source_code_[src].level();
+		source_depth_list_[src].p_source = &source_code_[src];
+	}
+
+	std::sort(source_depth_list_.begin(), source_depth_list_.end(), sort_by_level);
+	report_dependency();
+}
+
+void SourceTree::report_dependency()
+{
+	const size_t sources = source_depth_list_.size();
+	uint32_t index = 0;
+
+	for (size_t src = 0; src < sources; ++src)
+	{		
+		if (source_depth_list_[src].p_source->report())
+		{
+			index++;
+		}
+	}
+
+	printf("\n%04u source code files.\n", index);
 }
