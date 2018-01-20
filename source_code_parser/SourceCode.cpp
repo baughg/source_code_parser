@@ -188,3 +188,38 @@ bool Source::parse(const std::string &root_dir, std::string name)
 	}
 	return include_ids_.size() > 0;
 }
+
+
+void Source::add_include_me(Code::Source &src)
+{
+	src_include_me_.push_back(&src);
+}
+
+void Source::build_source_dependency_tree(std::map<uint64_t, std::vector<Code::Source*>> &source_id_map)
+{
+	const size_t include_count = include_list_.size();
+
+	if (!include_count)
+		return;
+
+	uint64_t id = 0ULL;
+	src_i_include_.reserve(include_count<<2);
+	source_to_include_mapping_.reserve(include_count << 2);
+	std::vector<Code::Source*> source_list;
+
+	for (size_t inc = 0; inc < include_count; ++inc)
+	{
+		id = include_ids_[inc];
+
+		if (source_id_map.find(id) != source_id_map.end())
+		{
+			source_list = source_id_map[id];
+
+			for (size_t sl = 0; sl < source_list.size(); ++sl)
+			{
+				src_i_include_.push_back(source_list[sl]);
+				source_to_include_mapping_.push_back((uint32_t)inc);
+			}
+		}
+	}
+}
