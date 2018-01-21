@@ -188,7 +188,7 @@ bool Source::parse(const std::string &root_dir, std::string name)
 			}
 		}
 	}
-	return include_ids_.size() > 0;
+	return true;
 }
 
 
@@ -238,7 +238,9 @@ void Source::build_source_dependency_tree(std::map<uint64_t, std::vector<Code::S
 	source_to_include_mapping_.reserve(include_count << 2);
 	std::vector<Code::Source*> source_list;
 	include_info_.resize(include_count);
-
+	std::string sub_path;
+	std::string include_path;
+	size_t sub_str_loc = 0;
 	for (size_t inc = 0; inc < include_count; ++inc)
 	{
 		id = include_ids_[inc];
@@ -250,10 +252,33 @@ void Source::build_source_dependency_tree(std::map<uint64_t, std::vector<Code::S
 
 			for (size_t sl = 0; sl < source_list.size(); ++sl)
 			{
-				src_i_include_.push_back(source_list[sl]);
-				source_to_include_mapping_.push_back((uint32_t)inc);
-				include_info_[inc].is_external = 0;
-				source_list[sl]->add_include_me(*this);
+				sub_path = source_list[sl]->name_full_;
+				include_path = include_list_full_[inc];
+
+				std::replace(sub_path.begin(), sub_path.end(), '\\', '/');
+				std::replace(include_path.begin(), include_path.end(), '\\', '/');
+
+				size_t rel_path = include_path.rfind("../");
+
+				while (rel_path != std::string::npos)
+				{
+					include_path = include_path.substr(rel_path+3);
+					rel_path = include_path.rfind("../");
+				}
+
+				sub_str_loc = sub_path.rfind(include_path);
+				
+				if (sub_str_loc != std::string::npos) {
+					sub_str_loc = sub_path.length() - sub_str_loc;
+
+					if (sub_str_loc == include_path.length())
+					{
+						src_i_include_.push_back(source_list[sl]);
+						source_to_include_mapping_.push_back((uint32_t)inc);
+						include_info_[inc].is_external = 0;
+						source_list[sl]->add_include_me(*this);
+					}
+				}
 			}
 		}
 	}
@@ -298,9 +323,10 @@ bool Source::report()
 
 		for (size_t src = 0; src < src_i_include_count; ++src)
 		{
-			printf("\t%03u. %s\n",
+			printf("\t%03u. %s [%s]\n",
 				src_i_include_[src]->level_,
-				src_i_include_[src]->name_full_.c_str());
+				src_i_include_[src]->name_full_.c_str(),
+				include_list_full_[source_to_include_mapping_[src]].c_str());
 		}
 	}
 
