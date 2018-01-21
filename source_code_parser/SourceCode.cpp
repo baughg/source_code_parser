@@ -95,6 +95,11 @@ std::string Source::get_name()
 	return name_;
 }
 
+std::string Source::get_full_name()
+{
+	return name_full_;
+}
+
 void Source::get_dependency_graph_filtered(std::ofstream &graph_file, const uint32_t &enable_id)
 {
 	const size_t include_count = src_i_include_.size();

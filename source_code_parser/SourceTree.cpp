@@ -6,6 +6,7 @@
 using namespace Code;
 
 SourceTree::SourceTree()
+	: last_enable_id_(1)
 {
 }
 
@@ -18,14 +19,14 @@ SourceTree::~SourceTree()
 bool SourceTree::get_source(std::string & source_dir)
 {
 	IO::FileManager::subdirectory_content(source_dir, source_filenames_, true);
-	
+
 	source_code_.resize(source_filenames_.size());
 	const size_t source_count = source_code_.size();
 	std::string dot_filename = "dependency.gv";
 
 	std::ofstream graph_file(dot_filename.c_str());
 	graph_file << "digraph G {\n" << std::endl;
-	
+
 	uint64_t id;
 
 	for (size_t src = 0; src < source_count; ++src)
@@ -100,7 +101,7 @@ void SourceTree::report_dependency()
 	uint32_t index = 0;
 
 	for (size_t src = 0; src < sources; ++src)
-	{		
+	{
 		if (source_depth_list_[src].p_source->report())
 		{
 			index++;
@@ -108,6 +109,74 @@ void SourceTree::report_dependency()
 	}
 
 	printf("\n%04u source code files.\n", index);
+}
+
+void SourceTree::build_branch_graph(std::string &src_name)
+{
+	const size_t sources = source_depth_list_.size();
+	uint32_t enable_id = last_enable_id_;
+	bool enable_update = true;
+	char extension[64];
+	IO::FileManager::make_directory("graphs");
+	IO::FileManager::make_directory("pdf");
+
+	std::ofstream build_pdfs("pdf_custom.bat");
+	//build_pdfs << "del /f /q pdf\\*.*" << std::endl;
+
+
+	size_t src = 0;
+	bool found = false;
+
+	for (src = 0; src < sources; ++src)
+	{
+		if (strcmp(source_depth_list_[src].p_source->get_full_name().c_str(), src_name.c_str()) == 0)
+		{
+			found = true;
+			break;
+		}
+	}
+
+	if (!found)
+		return;
+
+	source_depth_list_[src].p_source->set_enable_id(enable_id);
+
+	enable_update = true;
+
+	while (enable_update)
+	{
+		enable_update = false;
+
+		for (size_t s = 0; s < sources; ++s)
+		{
+			enable_update |= source_depth_list_[s].p_source->enable_update(enable_id);
+		}
+	}
+
+	std::string dot_filename = "graphs\\" + source_depth_list_[src].p_source->get_name();
+
+	sprintf(extension, "_%04u_custom.gv", enable_id);
+	dot_filename.append(std::string(extension));
+
+	std::ofstream graph_file(dot_filename.c_str());
+	graph_file << "digraph G {\n" << std::endl;
+
+	build_pdfs << "dot -Grankdir=LR -Tpdf " << dot_filename << " -o pdf\\" << source_depth_list_[src].p_source->get_name() << extension << ".pdf" << std::endl;
+
+	uint64_t id;
+
+	for (size_t s = 0; s < sources; ++s)
+	{
+		source_code_[s].get_dependency_graph_filtered(graph_file, enable_id);
+	}
+
+	graph_file << "}" << std::endl;
+	graph_file.close();
+
+
+
+
+	build_pdfs.close();
 }
 
 void SourceTree::build_branch_graphs()
@@ -121,7 +190,7 @@ void SourceTree::build_branch_graphs()
 
 	std::ofstream build_pdfs("pdf_build.bat");
 	build_pdfs << "del /f /q pdf\\*.*" << std::endl;
-	
+
 
 	for (size_t src = 0; src < sources; ++src)
 	{
@@ -149,7 +218,7 @@ void SourceTree::build_branch_graphs()
 			std::ofstream graph_file(dot_filename.c_str());
 			graph_file << "digraph G {\n" << std::endl;
 
-			build_pdfs << "dot -Tpdf " << dot_filename << " -o pdf\\" << source_depth_list_[src].p_source->get_name() << extension << ".pdf" << std::endl;
+			build_pdfs << "dot -Grankdir=LR -Tpdf " << dot_filename << " -o pdf\\" << source_depth_list_[src].p_source->get_name() << extension << ".pdf" << std::endl;
 
 			uint64_t id;
 
@@ -167,5 +236,6 @@ void SourceTree::build_branch_graphs()
 			break;
 	}
 
+	last_enable_id_ = enable_id;
 	build_pdfs.close();
 }

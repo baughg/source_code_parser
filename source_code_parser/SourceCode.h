@@ -35,6 +35,7 @@ namespace Code
 		bool enable_update(const uint32_t &en_id);
 		bool report();
 		std::string get_name();
+		std::string get_full_name();
 	private:
 		void add_include_me(Code::Source &src);
 		void just_filename(std::string &name);

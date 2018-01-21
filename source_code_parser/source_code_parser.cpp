@@ -18,6 +18,13 @@ int main(int argc, char** argv)
 	Code::SourceTree tree;
 	tree.get_source(source_dir);
 	tree.compute_source_distances();
+	std::string file_graph;
+
+	if (argc >= 3)
+	{
+		file_graph = argv[2];
+		tree.build_branch_graph(file_graph);
+	}
 	printf("dot -Grankdir=LR -Tpdf dependency.gv -o dependency.pdf\n");
 	return 0;
 }

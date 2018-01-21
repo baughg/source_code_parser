@@ -28,11 +28,13 @@ namespace Code
 		void compute_source_distances();
 		void report_dependency();
 		void build_branch_graphs();
+		void build_branch_graph(std::string &src_name);
 	private:
 		IO::string_list source_filenames_;
 		std::vector<Code::Source> source_code_;
 		std::vector<source_depth> source_depth_list_;
 		std::map<uint64_t, std::vector<Code::Source*>> source_id_map_;
+		uint32_t last_enable_id_;
 	};
 }
 #endif
