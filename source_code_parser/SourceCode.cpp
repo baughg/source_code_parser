@@ -114,7 +114,7 @@ void Source::get_dependency_graph_filtered(std::ofstream &graph_file, const uint
 	graph_file
 		<< parent_node
 		<< " [label=\""
-		<< name_
+		<< name_full_
 		<< "\"]"
 		<< std::endl;
 
@@ -129,7 +129,7 @@ void Source::get_dependency_graph_filtered(std::ofstream &graph_file, const uint
 		graph_file
 			<< child_node
 			<< " [label=\""
-			<< src_i_include_[i]->name_
+			<< src_i_include_[i]->name_full_
 			<< "\"]"
 			<< std::endl;
 
@@ -155,6 +155,8 @@ bool Source::parse(const std::string &root_dir, std::string name)
 	if (!name_.length())
 		return false;
 	
+	std::replace(name_.begin(), name_.end(), '\\', '/');
+
 	name_full_ = name_;
 	just_filename(name_);
 	MyHash::string_hash(name_, id_);
@@ -223,6 +225,7 @@ bool Source::parse(const std::string &root_dir, std::string name)
 					{
 						inc_filename = std::string(include_file);
 						trim(inc_filename);
+						std::replace(inc_filename.begin(), inc_filename.end(), '\\', '/');
 						include_list_full_.push_back(inc_filename);
 						just_filename(inc_filename);						
 						include_list_.push_back(inc_filename);
