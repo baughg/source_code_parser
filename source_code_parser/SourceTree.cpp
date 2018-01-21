@@ -120,7 +120,7 @@ void SourceTree::build_branch_graphs()
 	IO::FileManager::make_directory("pdf");
 
 	std::ofstream build_pdfs("pdf_build.bat");
-	build_pdfs << "del /Y pdf\\*.*" << std::endl;
+	build_pdfs << "del /f /q pdf\\*.*" << std::endl;
 	
 
 	for (size_t src = 0; src < sources; ++src)
