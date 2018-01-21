@@ -119,3 +119,13 @@ bool FileManager::get_text_from_file(const std::string &text_filename, string_li
 	
 	return true;
 }
+
+bool FileManager::make_directory(std::string dir_name)
+{
+#ifdef _WIN32
+	bool success = !_mkdir(dir_name.c_str());
+	success |= errno == EEXIST;
+	return !success;
+#else
+#endif
+}

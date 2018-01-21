@@ -1,4 +1,6 @@
 #include "SourceTree.h"
+#include "FileManager.h"
+
 #include <algorithm>
 
 using namespace Code;
@@ -89,6 +91,7 @@ void SourceTree::compute_source_distances()
 
 	std::sort(source_depth_list_.begin(), source_depth_list_.end(), sort_by_level);
 	report_dependency();
+	build_branch_graphs();
 }
 
 void SourceTree::report_dependency()
@@ -105,4 +108,64 @@ void SourceTree::report_dependency()
 	}
 
 	printf("\n%04u source code files.\n", index);
+}
+
+void SourceTree::build_branch_graphs()
+{
+	const size_t sources = source_depth_list_.size();
+	uint32_t enable_id = 1;
+	bool enable_update = true;
+	char extension[16];
+	IO::FileManager::make_directory("graphs");
+	IO::FileManager::make_directory("pdf");
+
+	std::ofstream build_pdfs("pdf_build.bat");
+	build_pdfs << "del /Y pdf\\*.*" << std::endl;
+	
+
+	for (size_t src = 0; src < sources; ++src)
+	{
+		if (source_depth_list_[src].p_source->level() == 1)
+		{
+			source_depth_list_[src].p_source->set_enable_id(enable_id);
+
+			enable_update = true;
+
+			while (enable_update)
+			{
+				enable_update = false;
+
+				for (size_t s = 0; s < sources; ++s)
+				{
+					enable_update |= source_depth_list_[s].p_source->enable_update(enable_id);
+				}
+			}
+
+			std::string dot_filename = "graphs\\" + source_depth_list_[src].p_source->get_name();
+
+			sprintf(extension, "_%04u.gv", enable_id);
+			dot_filename.append(std::string(extension));
+
+			std::ofstream graph_file(dot_filename.c_str());
+			graph_file << "digraph G {\n" << std::endl;
+
+			build_pdfs << "dot -Tpdf " << dot_filename << " -o pdf\\" << source_depth_list_[src].p_source->get_name() << extension << ".pdf" << std::endl;
+
+			uint64_t id;
+
+			for (size_t s = 0; s < sources; ++s)
+			{
+				source_code_[s].get_dependency_graph_filtered(graph_file, enable_id);
+			}
+
+			graph_file << "}" << std::endl;
+			graph_file.close();
+
+			enable_id++;
+		}
+		else
+			break;
+	}
+
+	build_pdfs.close();
 }

@@ -11,7 +11,8 @@ using namespace Code;
 Source::Source()
 	: id_(0ULL),
 	level_(1),
-	p_longest_path_src_(nullptr)
+	p_longest_path_src_(nullptr),
+	enabled_id_(0)
 {
 }
 
@@ -73,7 +74,7 @@ void Source::get_dependency_graph(std::ofstream &graph_file)
 		<< std::endl;
 
 	for (size_t i = 0; i < include_count; ++i)
-	{
+	{		
 		child_node = "node";
 		child_node.append(include_nodes_[i]);
 
@@ -81,6 +82,54 @@ void Source::get_dependency_graph(std::ofstream &graph_file)
 			<< child_node
 			<< " [label=\""
 			<< include_list_[i]
+			<< "\"]"
+			<< std::endl;
+
+		graph_file << parent_node
+			<< " -> " << child_node << std::endl;
+	}
+}
+
+std::string Source::get_name()
+{
+	return name_;
+}
+
+void Source::get_dependency_graph_filtered(std::ofstream &graph_file, const uint32_t &enable_id)
+{
+	const size_t include_count = src_i_include_.size();
+
+	if (!include_count || enabled_id_ != enable_id)
+		return;
+
+	std::string parent_node = "node";
+	std::string child_node = "node";
+	parent_node.append(node_);
+
+	graph_file
+		<< parent_node
+		<< " [shape=box]"
+		<< std::endl;
+
+	graph_file
+		<< parent_node
+		<< " [label=\""
+		<< name_
+		<< "\"]"
+		<< std::endl;
+
+	for (size_t i = 0; i < include_count; ++i)
+	{
+		if (src_i_include_[i]->enabled_id_ != enable_id)
+			continue;
+
+		child_node = "node";
+		child_node.append(src_i_include_[i]->node_);
+
+		graph_file
+			<< child_node
+			<< " [label=\""
+			<< src_i_include_[i]->name_
 			<< "\"]"
 			<< std::endl;
 
@@ -287,6 +336,28 @@ void Source::build_source_dependency_tree(std::map<uint64_t, std::vector<Code::S
 uint32_t Source::level()
 {
 	return level_;
+}
+
+void Source::set_enable_id(uint32_t enable_id)
+{
+	enabled_id_ = enable_id;
+}
+
+bool Source::enable_update(const uint32_t &en_id)
+{
+	const size_t src_i_include_count = src_i_include_.size();
+	uint32_t old_enabled_id = enabled_id_;
+
+	for (size_t src = 0; src < src_i_include_count; ++src)
+	{
+		if (src_i_include_[src]->enabled_id_ == en_id)
+		{
+			enabled_id_ = en_id;
+			break;
+		}
+	}
+
+	return old_enabled_id != enabled_id_;
 }
 
 bool Source::report()

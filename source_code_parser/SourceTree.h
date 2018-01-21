@@ -27,6 +27,7 @@ namespace Code
 		bool get_source(std::string & root_dir);
 		void compute_source_distances();
 		void report_dependency();
+		void build_branch_graphs();
 	private:
 		IO::string_list source_filenames_;
 		std::vector<Code::Source> source_code_;
