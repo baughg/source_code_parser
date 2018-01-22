@@ -28,6 +28,7 @@ namespace Code
 		void get_dependency_graph(std::ofstream &graph);
 		void get_dependency_graph_filtered(std::ofstream &graph_file, const uint32_t &enable_id);
 		uint64_t get_id();
+    std::vector<uint64_t> &get_id_list();
 		void build_source_dependency_tree(std::map<uint64_t, std::vector<Code::Source*>> &source_id_map);
 		bool find_tree_level();
 		uint32_t level();
@@ -37,12 +38,15 @@ namespace Code
 		std::string get_name();
 		std::string get_full_name();
 	private:
+    void string_split(std::string &content, IO::string_list &split);
+    void generate_id_list(std::string &name);
 		void add_include_me(Code::Source &src);
 		void just_filename(std::string &name);
 		std::string name_;
 		std::string name_full_;
 		std::string node_;
 		uint64_t id_;
+    std::vector<uint64_t> id_list_;
 		uint32_t level_;
 		uint32_t enabled_id_;
 		IO::string_list include_list_;

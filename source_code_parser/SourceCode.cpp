@@ -5,6 +5,7 @@
 #include <functional> 
 #include <cctype>
 #include <locale>
+#include <sstream>
 
 using namespace Code;
 
@@ -48,6 +49,24 @@ void Source::to_lowercase(std::string &s) {
 uint64_t Source::get_id()
 {
 	return id_;
+}
+
+std::vector<uint64_t> &Source::get_id_list()
+{
+  return id_list_;
+}
+
+void Source::string_split(std::string &content, IO::string_list &split)
+{
+  std::istringstream ss(content);
+  std::string token;
+
+  while (std::getline(ss, token, '/')) {
+    token = trim(token);
+
+    if (token.length())
+      split.push_back(token);
+  }
 }
 
 void Source::get_dependency_graph(std::ofstream &graph_file)
@@ -153,6 +172,27 @@ void Source::just_filename(std::string &name)
 		name = name.substr(dir_loc + 1);
 }
 
+void Source::generate_id_list(std::string &name)
+{
+  IO::string_list split;
+
+  string_split(name, split);
+
+  const int parts = (int)split.size() - 1;
+  std::string sub_name = split[parts];
+  id_list_.resize(split.size());
+  
+  for (int s = parts; s >= 0; s--)
+  {
+    MyHash::string_hash(sub_name, id_list_[s]);
+
+    if (s)
+    {
+      sub_name = split[s-1] + "/" + sub_name;
+    }
+  }
+}
+
 bool Source::parse(const std::string &root_dir, std::string name)
 {
 	name_ = name.substr(root_dir.length(), name.length() - root_dir.length());
@@ -163,8 +203,12 @@ bool Source::parse(const std::string &root_dir, std::string name)
 	std::replace(name_.begin(), name_.end(), '\\', '/');
 
 	name_full_ = name_;
+
+  generate_id_list(name_full_);
+
 	just_filename(name_);
-	MyHash::string_hash(name_, id_);
+	//MyHash::string_hash(name_, id_);
+  id_ = id_list_[0];
 	node_ = MyHash::hexstring64(id_);
 
 	IO::string_list lines;
@@ -189,6 +233,7 @@ bool Source::parse(const std::string &root_dir, std::string name)
 	include_list_full_.reserve(16);
 	uint64_t id = 0ULL;
 	std::string inc_filename;
+  std::string inc_filename_full;
 
 	for (size_t l = 0; l < line_count; ++l)
 	{
@@ -231,10 +276,11 @@ bool Source::parse(const std::string &root_dir, std::string name)
 						inc_filename = std::string(include_file);
 						trim(inc_filename);
 						std::replace(inc_filename.begin(), inc_filename.end(), '\\', '/');
+            inc_filename_full = inc_filename;
 						include_list_full_.push_back(inc_filename);
 						just_filename(inc_filename);						
 						include_list_.push_back(inc_filename);
-						MyHash::string_hash(inc_filename, id);
+						MyHash::string_hash(inc_filename_full, id);
 						include_ids_.push_back(id);
 						include_nodes_.push_back(MyHash::hexstring64(id));						
 						break;

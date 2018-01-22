@@ -28,25 +28,32 @@ bool SourceTree::get_source(std::string & source_dir)
 	graph_file << "digraph G {\n" << std::endl;
 
 	uint64_t id;
+  std::vector<uint64_t> id_list;
+  size_t id_count = 0;
 
 	for (size_t src = 0; src < source_count; ++src)
 	{
 		if (source_code_[src].parse(source_dir, source_filenames_[src]))
 		{
-			id = source_code_[src].get_id();
+      id_list = source_code_[src].get_id_list();
+      id_count = id_list.size();
 
-			if (source_id_map_.find(id) == source_id_map_.end())
-			{
-				std::vector<Code::Source*> src_ind(1);
-				src_ind[0] = &source_code_[src];
-				source_id_map_[id] = src_ind;
-			}
-			else
-			{
-				std::vector<Code::Source*> src_ind = source_id_map_[id];
-				src_ind.push_back(&source_code_[src]);
-				source_id_map_[id] = src_ind;
-			}
+      for (size_t i = 0; i < id_count; ++i) {
+        id = id_list[i];
+
+        if (source_id_map_.find(id) == source_id_map_.end())
+        {
+          std::vector<Code::Source*> src_ind(1);
+          src_ind[0] = &source_code_[src];
+          source_id_map_[id] = src_ind;
+        }
+        else
+        {
+          std::vector<Code::Source*> src_ind = source_id_map_[id];
+          src_ind.push_back(&source_code_[src]);
+          source_id_map_[id] = src_ind;
+        }
+      }
 			source_code_[src].get_dependency_graph(graph_file);
 		}
 	}
